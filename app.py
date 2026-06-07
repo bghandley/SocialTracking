@@ -1,7 +1,6 @@
 import streamlit as st
 from datetime import datetime, timezone
 import uuid
-import os
 import re
 
 from supabase import create_client, Client
@@ -21,9 +20,6 @@ def generate_edit_link(token: str) -> str:
 
 def validate_email(email: str) -> bool:
     return bool(re.match(r"[^@]+@[^@]+\.[^@]+", email))
-
-def nav_home():
-    st.page_link("app.py", page="submit", icon="📋")
 
 # ─── SUBMIT PAGE ───────────────────────────────────────────────
 def render_submit():
@@ -79,15 +75,14 @@ def render_submit():
         st.success("✅ Submitted!")
         st.info(f"**Save this link to edit or delete your entry:**\n\n{link}")
         st.caption("Bookmark it now — you'll need this link to make changes later.")
-        
-        col1, col2 = st.columns(2)
-        with col1:
-            st.page_link("app.py", page="directory", label="📋 View All Handles", icon="👥")
-        with col2:
-            st.page_link("app.py", page="forgot", label="🔍 Forgot My Link", icon="🔑")
 
     st.divider()
-    st.page_link("app.py", page="directory", label="👥 View All Handles", icon="🌐")
+    st.write("**Navigation**")
+    col1, col2 = st.columns(2)
+    with col1:
+        st.link_button("👥 View All Handles", "https://socialtracking-zsbtmpko27npe58rzbwkh8.streamlit.app/?page=directory", use_container_width=True)
+    with col2:
+        st.link_button("🔑 Forgot My Link", "https://socialtracking-zsbtmpko27npe58rzbwkh8.streamlit.app/?page=forgot", use_container_width=True)
 
 # ─── EDIT PAGE ────────────────────────────────────────────────
 def render_edit(token: str):
@@ -100,8 +95,12 @@ def render_edit(token: str):
 
     if not result.data:
         st.error("❌ Invalid or expired link.")
-        st.info("Use the link you received when you first submitted, or use the 'Forgot My Link' page.")
-        st.page_link("app.py", page="forgot", label="🔍 Forgot My Link?", icon="🔑")
+        st.info("Use the 'Forgot My Link' page to recover your edit link.")
+        col1, col2 = st.columns(2)
+        with col1:
+            st.link_button("🔑 Forgot My Link", "https://socialtracking-zsbtmpko27npe58rzbwkh8.streamlit.app/?page=forgot", use_container_width=True)
+        with col2:
+            st.link_button("📋 Submit New", "https://socialtracking-zsbtmpko27npe58rzbwkh8.streamlit.app/", use_container_width=True)
         return
 
     entry = result.data[0]
@@ -148,14 +147,14 @@ def render_edit(token: str):
         if st.button("🗑️ Delete My Entry", use_container_width=True):
             supabase.table("handles").delete().eq("edit_token", token).execute()
             st.success("✅ Deleted! You can submit again anytime.")
-            st.page_link("app.py", page="submit", label="📋 Submit Again", icon="📋")
+            st.link_button("📋 Submit Again", "https://socialtracking-zsbtmpko27npe58rzbwkh8.streamlit.app/", use_container_width=True)
 
     st.divider()
     col_a, col_b = st.columns(2)
     with col_a:
-        st.page_link("app.py", page="submit", label="📋 Home", icon="🏠")
+        st.link_button("🏠 Home", "https://socialtracking-zsbtmpko27npe58rzbwkh8.streamlit.app/", use_container_width=True)
     with col_b:
-        st.page_link("app.py", page="directory", label="👥 View All", icon="🌐")
+        st.link_button("👥 View All", "https://socialtracking-zsbtmpko27npe58rzbwkh8.streamlit.app/?page=directory", use_container_width=True)
 
 # ─── DIRECTORY PAGE ────────────────────────────────────────────
 def render_directory():
@@ -171,7 +170,7 @@ def render_directory():
 
     if not result.data:
         st.info("No entries yet. Be the first to submit!")
-        st.page_link("app.py", page="submit", label="📋 Submit Your Handle", icon="📋")
+        st.link_button("📋 Submit Your Handle", "https://socialtracking-zsbtmpko27npe58rzbwkh8.streamlit.app/", use_container_width=True)
         return
 
     col1, col2 = st.columns(2)
@@ -214,9 +213,9 @@ def render_directory():
     st.divider()
     col1, col2 = st.columns(2)
     with col1:
-        st.page_link("app.py", page="submit", label="📋 Submit Your Handle", icon="📋")
+        st.link_button("📋 Submit Your Handle", "https://socialtracking-zsbtmpko27npe58rzbwkh8.streamlit.app/", use_container_width=True)
     with col2:
-        st.page_link("app.py", page="forgot", label="🔍 Forgot My Link?", icon="🔑")
+        st.link_button("🔑 Forgot My Link", "https://socialtracking-zsbtmpko27npe58rzbwkh8.streamlit.app/?page=forgot", use_container_width=True)
 
 # ─── FORGOT LINK PAGE ──────────────────────────────────────────
 def render_forgot():
@@ -239,7 +238,7 @@ def render_forgot():
 
         if not result.data:
             st.warning("No entry found for that email. Did you use a different one?")
-            st.page_link("app.py", page="submit", label="📋 Submit Instead", icon="📋")
+            st.link_button("📋 Submit Instead", "https://socialtracking-zsbtmpko27npe58rzbwkh8.streamlit.app/", use_container_width=True)
             return
 
         token = result.data[0]["edit_token"]
@@ -253,9 +252,9 @@ def render_forgot():
     st.divider()
     col1, col2 = st.columns(2)
     with col1:
-        st.page_link("app.py", page="submit", label="📋 Submit / Update", icon="📋")
+        st.link_button("📋 Submit / Update", "https://socialtracking-zsbtmpko27npe58rzbwkh8.streamlit.app/", use_container_width=True)
     with col2:
-        st.page_link("app.py", page="directory", label="👥 View All Handles", icon="🌐")
+        st.link_button("👥 View All Handles", "https://socialtracking-zsbtmpko27npe58rzbwkh8.streamlit.app/?page=directory", use_container_width=True)
 
 # ─── MAIN ──────────────────────────────────────────────────────
 page = st.query_params.get("page", "submit")
