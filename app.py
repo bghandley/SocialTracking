@@ -59,7 +59,7 @@ def render_submit_form(supabase: Client):
             result = supabase.table("handles").insert(data).execute()
             if result.data:
                 st.success("Submitted!")
-                st.info(f"Save this link to edit or delete later:\n\n{generate_edit_link(token, 'YOUR_APP_URL')}")
+                st.info(f"Save this link to edit or delete later:\n\n{generate_edit_link(token, 'https://socialtracking-zsbtmpko27npe58rzbwkh8.streamlit.app/')}")
                 st.caption("Share this link with anyone who needs to edit/delete their entry.")
             else:
                 st.error("Failed to save. Is Supabase configured?")
