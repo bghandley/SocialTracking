@@ -142,20 +142,24 @@ def render_edit(token: str):
                 "instagram_handle": new_ig.strip() or None,
             }).eq("edit_token", token).execute()
             st.success("✅ Saved!")
-            st.rerun()
+            col_a, col_b = st.columns(2)
+            with col_a:
+                st.link_button("🏠 Back to Home", "https://socialtracking-zsbtmpko27npe58rzbwkh8.streamlit.app/", use_container_width=True)
+            with col_b:
+                st.link_button("👥 View Directory", "https://socialtracking-zsbtmpko27npe58rzbwkh8.streamlit.app/?page=directory", use_container_width=True)
 
     with col2:
         if st.button("🗑️ Delete My Entry", use_container_width=True):
             supabase.table("handles").delete().eq("edit_token", token).execute()
-            st.success("✅ Deleted! You can submit again anytime.")
-            st.link_button("📋 Submit Again", "https://socialtracking-zsbtmpko27npe58rzbwkh8.streamlit.app/", use_container_width=True)
+            st.success("✅ Deleted!")
+            st.link_button("🏠 Back to Home", "https://socialtracking-zsbtmpko27npe58rzbwkh8.streamlit.app/", use_container_width=True)
 
     st.divider()
     col_a, col_b = st.columns(2)
     with col_a:
         st.link_button("🏠 Home", "https://socialtracking-zsbtmpko27npe58rzbwkh8.streamlit.app/", use_container_width=True)
     with col_b:
-        st.link_button("👥 View All", "https://socialtracking-zsbtmpko27npe58rzbwkh8.streamlit.app/?page=directory", use_container_width=True)
+        st.link_button("👥 View Directory", "https://socialtracking-zsbtmpko27npe58rzbwkh8.streamlit.app/?page=directory", use_container_width=True)
 
 # ─── DIRECTORY PAGE ────────────────────────────────────────────
 def render_directory():
