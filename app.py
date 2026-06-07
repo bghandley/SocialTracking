@@ -216,10 +216,12 @@ def render_directory():
     st.caption(f"{len(filtered)} people in the directory")
 
     st.divider()
-    col1, col2 = st.columns(2)
+    col1, col2, col3 = st.columns(3)
     with col1:
-        st.link_button("📋 Submit Your Handle", "https://socialtracking-zsbtmpko27npe58rzbwkh8.streamlit.app/", use_container_width=True)
+        st.link_button("🏠 Home", "https://socialtracking-zsbtmpko27npe58rzbwkh8.streamlit.app/", use_container_width=True)
     with col2:
+        st.link_button("📋 Submit", "https://socialtracking-zsbtmpko27npe58rzbwkh8.streamlit.app/", use_container_width=True)
+    with col3:
         st.link_button("🔑 Forgot My Link", "https://socialtracking-zsbtmpko27npe58rzbwkh8.streamlit.app/?page=forgot", use_container_width=True)
 
 # ─── FORGOT LINK PAGE ──────────────────────────────────────────
