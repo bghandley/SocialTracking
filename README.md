@@ -25,13 +25,13 @@
    SUPABASE_URL = "https://your-project.supabase.co"
    SUPABASE_KEY = "your-anon-key"
    ```
-5. Find your Streamlit URL (e.g., `https://your-app.streamlit.app`)
+5. Find your Streamlit URL (e.g., `https://socialtracking-zsbtmpko27npe58rzbwkh8.streamlit.app`)
 
 ## Step 3: Update the Edit Link Base URL
 
 In `app.py`, replace `YOUR_APP_URL` with your actual Streamlit URL:
 ```python
-st.info(f"Save this link to edit or delete later:\n\n{generate_edit_link(token, 'https://your-app.streamlit.app')}")
+st.info(f"Save this link to edit or delete your entry:\n\n{link}")
 ```
 
 ## Step 4: Share
