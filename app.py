@@ -1,5 +1,5 @@
 import streamlit as st
-from datetime import datetime
+from datetime import datetime, timezone
 import uuid
 import os
 import re
@@ -8,10 +8,6 @@ from supabase import create_client, Client
 
 SUPABASE_URL = os.getenv("SUPABASE_URL", "")
 SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
-EMAILJS_SERVICE_ID = os.getenv("EMAILJS_SERVICE_ID", "")
-EMAILJS_TEMPLATE_ID = os.getenv("EMAILJS_TEMPLATE_ID", "")
-EMAILJS_PUBLIC_KEY = os.getenv("EMAILJS_PUBLIC_KEY", "")
-EMAILJS_TO_EMAIL = os.getenv("EMAILJS_TO_EMAIL", "")
 
 st.set_page_config(page_title="Social Handle Tracker", page_icon="📋")
 
@@ -21,10 +17,13 @@ def get_supabase() -> Client:
     return None
 
 def generate_edit_link(token: str) -> str:
-    return f"https://socialtracking-zsbtmpko27npe58rzbwkh8.streamlit.app?page=edit&token={token}"
+    return f"https://socialtracking-zsbtmpko27npe58rzbwkh8.streamlit.app/?page=edit&token={token}"
 
 def validate_email(email: str) -> bool:
     return bool(re.match(r"[^@]+@[^@]+\.[^@]+", email))
+
+def nav_home():
+    st.page_link("app.py", page="submit", icon="📋")
 
 # ─── SUBMIT PAGE ───────────────────────────────────────────────
 def render_submit():
@@ -52,11 +51,9 @@ def render_submit():
             st.error("Database not connected.")
             return
 
-        # Check if name+email combo already exists → update instead of insert
         existing = supabase.table("handles").select("edit_token,name").eq("email", email.strip().lower()).execute()
         
         if existing.data:
-            # Update existing entry
             token = existing.data[0]["edit_token"]
             supabase.table("handles").update({
                 "name": name.strip(),
@@ -66,7 +63,6 @@ def render_submit():
                 "instagram_handle": instagram,
             }).eq("edit_token", token).execute()
         else:
-            # New entry
             token = str(uuid.uuid4())
             supabase.table("handles").insert({
                 "name": name.strip(),
@@ -76,41 +72,25 @@ def render_submit():
                 "tiktok_handle": tiktok,
                 "instagram_handle": instagram,
                 "edit_token": token,
-                "created_at": datetime.utcnow().isoformat(),
+                "created_at": datetime.now(timezone.utc).isoformat(),
             }).execute()
 
         link = generate_edit_link(token)
-        st.success("Submitted!")
+        st.success("✅ Submitted!")
         st.info(f"**Save this link to edit or delete your entry:**\n\n{link}")
-        st.caption("You'll also need this link if you forget it later — so bookmark it!")
+        st.caption("Bookmark it now — you'll need this link to make changes later.")
         
-        # Email notification via EmailJS (if configured)
-        if EMAILJS_SERVICE_ID and EMAILJS_TEMPLATE_ID and EMAILJS_PUBLIC_KEY:
-            st.info("📧 Want us to email you this link? Enter your email below.")
-            email_for_link = st.text_input("Your email", key="email_link_send", value=email)
-            if st.button("Send me the link via email"):
-                st.session_state["email_sent"] = True
+        col1, col2 = st.columns(2)
+        with col1:
+            st.page_link("app.py", page="directory", label="📋 View All Handles", icon="👥")
+        with col2:
+            st.page_link("app.py", page="forgot", label="🔍 Forgot My Link", icon="🔑")
 
-    # EmailJS emailer (shown after submit)
-    if st.session_state.get("email_sent"):
-        st.success("Check your inbox!")
-        # EmailJS is client-side only — we pass the email to a JavaScript handler
-        st.components.v1.html(f"""
-        <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-        <script>
-          emailjs.init(""+'{EMAILJS_PUBLIC_KEY}'+"");
-          emailjs.send(""+'{EMAILJS_SERVICE_ID}'+", ""+'{EMAILJS_TEMPLATE_ID}'+"", {{
-            "to_email": ""+'{st.session_state.get("submit_email", "")}'+"",
-            "edit_link": ""+'{generate_edit_link(st.session_state.get("submit_token", ""))}'+"",
-            "from_email": ""+'{EMAILJS_TO_EMAIL}'+""
-          }});
-        </script>
-        """, height=0)
+    st.divider()
+    st.page_link("app.py", page="directory", label="👥 View All Handles", icon="🌐")
 
 # ─── EDIT PAGE ────────────────────────────────────────────────
 def render_edit(token: str):
-    st.title("✏️ Edit Your Entry")
-
     supabase = get_supabase()
     if not supabase:
         st.error("Database not connected.")
@@ -119,14 +99,15 @@ def render_edit(token: str):
     result = supabase.table("handles").select("*").eq("edit_token", token).execute()
 
     if not result.data:
-        st.error("Invalid or expired link.")
-        st.info("Use the 'Forgot my link' page to recover your edit link.")
+        st.error("❌ Invalid or expired link.")
+        st.info("Use the link you received when you first submitted, or use the 'Forgot My Link' page.")
+        st.page_link("app.py", page="forgot", label="🔍 Forgot My Link?", icon="🔑")
         return
 
     entry = result.data[0]
 
-    st.write(f"**Name:** {entry['name']}")
-    st.write(f"**Email:** {entry['email']}")
+    st.title("✏️ Edit Your Entry")
+    st.write(f"**Name:** {entry['name']}  ·  **Email:** {entry['email']}")
     st.write(f"**Platform:** {entry['platform']}")
     if entry.get('tiktok_handle'):
         st.write(f"**TikTok:** @{entry['tiktok_handle']}")
@@ -160,14 +141,21 @@ def render_edit(token: str):
                 "tiktok_handle": new_tiktok.strip() or None,
                 "instagram_handle": new_ig.strip() or None,
             }).eq("edit_token", token).execute()
-            st.success("Saved!")
+            st.success("✅ Saved!")
             st.rerun()
 
     with col2:
         if st.button("🗑️ Delete My Entry", use_container_width=True):
             supabase.table("handles").delete().eq("edit_token", token).execute()
-            st.success("Deleted! You can submit again anytime.")
-            st.info("[Submit a new entry →](/)", anchor=False)
+            st.success("✅ Deleted! You can submit again anytime.")
+            st.page_link("app.py", page="submit", label="📋 Submit Again", icon="📋")
+
+    st.divider()
+    col_a, col_b = st.columns(2)
+    with col_a:
+        st.page_link("app.py", page="submit", label="📋 Home", icon="🏠")
+    with col_b:
+        st.page_link("app.py", page="directory", label="👥 View All", icon="🌐")
 
 # ─── DIRECTORY PAGE ────────────────────────────────────────────
 def render_directory():
@@ -183,14 +171,14 @@ def render_directory():
 
     if not result.data:
         st.info("No entries yet. Be the first to submit!")
+        st.page_link("app.py", page="submit", label="📋 Submit Your Handle", icon="📋")
         return
 
-    # Filters
     col1, col2 = st.columns(2)
     with col1:
-        filter_platform = st.selectbox("Filter by platform", ["All", "TikTok", "Instagram", "Both"])
+        filter_platform = st.selectbox("Filter by platform", ["All", "TikTok", "Instagram", "Both"], key="filter_platform")
     with col2:
-        search = st.text_input("Search by name", placeholder="Type to filter...")
+        search = st.text_input("Search by name", placeholder="Type to filter...", key="search_name")
 
     filtered = result.data
     if filter_platform != "All":
@@ -212,26 +200,32 @@ def render_directory():
                 color = {"TikTok": "🔴", "Instagram": "📸", "Both": "🔴📸"}.get(badge, "")
                 st.markdown(f"{color} {badge}")
 
-            handles = []
             if entry.get('tiktok_handle'):
-                handles.append(f"TikTok: @{entry['tiktok_handle']}")
+                handle = entry['tiktok_handle'].strip().lstrip('@')
+                st.markdown(f"  · [TikTok: @{handle}](https://www.tiktok.com/@{handle})")
             if entry.get('instagram_handle'):
-                handles.append(f"IG: @{entry['instagram_handle']}")
-            
-            for h in handles:
-                st.markdown(f"  · {h}")
+                handle = entry['instagram_handle'].strip().lstrip('@')
+                st.markdown(f"  · [IG: @{handle}](https://www.instagram.com/{handle})")
             
             st.divider()
 
     st.caption(f"{len(filtered)} people in the directory")
 
+    st.divider()
+    col1, col2 = st.columns(2)
+    with col1:
+        st.page_link("app.py", page="submit", label="📋 Submit Your Handle", icon="📋")
+    with col2:
+        st.page_link("app.py", page="forgot", label="🔍 Forgot My Link?", icon="🔑")
+
 # ─── FORGOT LINK PAGE ──────────────────────────────────────────
 def render_forgot():
     st.title("🔍 Forgot Your Edit Link?")
+    st.write("Enter the email you used when submitting.")
 
-    email = st.text_input("Enter the email you used when submitting", placeholder="jane@email.com", key="forgot_email")
+    email = st.text_input("Your Email", placeholder="jane@email.com", key="forgot_email")
 
-    if st.button("Send My Edit Link", type="primary", use_container_width=True):
+    if st.button("Find My Link", type="primary", use_container_width=True):
         if not validate_email(email):
             st.error("Please enter a valid email.")
             return
@@ -245,37 +239,25 @@ def render_forgot():
 
         if not result.data:
             st.warning("No entry found for that email. Did you use a different one?")
-            st.info("If you don't have an account yet, submit your handle below.")
+            st.page_link("app.py", page="submit", label="📋 Submit Instead", icon="📋")
             return
 
         token = result.data[0]["edit_token"]
         name = result.data[0]["name"]
         link = generate_edit_link(token)
 
-        if EMAILJS_SERVICE_ID and EMAILJS_TEMPLATE_ID and EMAILJS_PUBLIC_KEY and EMAILJS_TO_EMAIL:
-            # Send email via EmailJS
-            st.components.v1.html(f"""
-            <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-            <script>
-              emailjs.init(""+'{EMAILJS_PUBLIC_KEY}'+"");
-              emailjs.send(""+'{EMAILJS_SERVICE_ID}'+", ""+'{EMAILJS_TEMPLATE_ID}'+"", {{
-                "to_email": ""+'{email}'+"",
-                "to_name": ""+'{name}'+"",
-                "edit_link": ""+'{link}'+"",
-                "from_email": ""+'{EMAILJS_TO_EMAIL}'+""
-              }});
-            </script>
-            """, height=0)
-            st.success(f"📧 Link sent to **{email}**! Check your inbox (and spam).")
-        else:
-            # Fallback: show link directly
-            st.warning("Email service not configured yet, but here's your link:")
-            st.info(f"**{link}**")
-            st.caption("Bookmark this to avoid losing it again!")
+        st.success(f"✅ Found entry for **{name}**!")
+        st.info(f"**Your edit/delete link:**\n\n{link}")
+        st.caption("Bookmark this link — you'll need it to edit or delete your entry later.")
 
-# ─── MAIN NAVIGATION ────────────────────────────────────────────
-st.sidebar.title("📋 Handle Tracker")
-st.sidebar.markdown("---")
+    st.divider()
+    col1, col2 = st.columns(2)
+    with col1:
+        st.page_link("app.py", page="submit", label="📋 Submit / Update", icon="📋")
+    with col2:
+        st.page_link("app.py", page="directory", label="👥 View All Handles", icon="🌐")
+
+# ─── MAIN ──────────────────────────────────────────────────────
 page = st.query_params.get("page", "submit")
 token = st.query_params.get("token", "")
 
@@ -286,13 +268,4 @@ elif page == "directory":
 elif page == "forgot":
     render_forgot()
 else:
-    nav = st.sidebar.radio("Go to", ["Submit", "View Directory", "Forgot My Link"])
-    
-    if nav == "Submit":
-        st.session_state["email_sent"] = False
-        st.session_state["submit_token"] = ""
-        render_submit()
-    elif nav == "View Directory":
-        render_directory()
-    elif nav == "Forgot My Link":
-        render_forgot()
+    render_submit()
